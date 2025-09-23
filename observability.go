@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Gen-Do/lib-observability/env"
 	"github.com/Gen-Do/lib-observability/logger"
 	"github.com/Gen-Do/lib-observability/metrics"
 	"github.com/Gen-Do/lib-observability/tracing"
@@ -21,6 +22,8 @@ type Observability struct {
 // Инициализирует логгер, метрики и трейсинг на основе переменных окружения
 func New(ctx context.Context) (*Observability, error) {
 	obs := &Observability{}
+
+	env.LoadEnvFiles()
 
 	// Инициализация логгера
 	obs.logger = logger.New(ctx)
