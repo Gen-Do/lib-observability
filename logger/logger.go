@@ -7,7 +7,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Gen-Do/lib-obersvability/env"
+	"github.com/Gen-Do/lib-observability/env"
 )
 
 // Fields представляет набор полей для логирования

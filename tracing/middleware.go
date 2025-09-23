@@ -11,7 +11,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/Gen-Do/lib-obersvability/env"
+	"github.com/Gen-Do/lib-observability/env"
 )
 
 // HTTPMiddleware создает middleware для трейсинга HTTP запросов

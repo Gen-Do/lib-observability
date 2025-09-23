@@ -5,9 +5,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Gen-Do/lib-obersvability/logger"
-	"github.com/Gen-Do/lib-obersvability/metrics"
-	"github.com/Gen-Do/lib-obersvability/tracing"
+	"github.com/Gen-Do/lib-observability/logger"
+	"github.com/Gen-Do/lib-observability/metrics"
+	"github.com/Gen-Do/lib-observability/tracing"
 )
 
 // Observability центральная структура для управления всеми компонентами observability

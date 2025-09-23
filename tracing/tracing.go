@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 
-	"github.com/Gen-Do/lib-obersvability/env"
+	"github.com/Gen-Do/lib-observability/env"
 )
 
 var (

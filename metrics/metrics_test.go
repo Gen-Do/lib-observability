@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	httputil "github.com/Gen-Do/lib-obersvability/internal/http"
+	httputil "github.com/Gen-Do/lib-observability/internal/http"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

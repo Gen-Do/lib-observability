@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Gen-Do/lib-obersvability/env"
-	httputil "github.com/Gen-Do/lib-obersvability/internal/http"
+	"github.com/Gen-Do/lib-observability/env"
+	httputil "github.com/Gen-Do/lib-observability/internal/http"
 )
 
 // HTTPMiddleware создает middleware для логирования HTTP запросов

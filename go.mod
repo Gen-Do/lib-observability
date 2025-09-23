@@ -1,4 +1,4 @@
-module github.com/Gen-Do/lib-obersvability
+module github.com/Gen-Do/lib-observability
 
 go 1.24.4
 

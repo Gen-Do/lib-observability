@@ -12,8 +12,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/Gen-Do/lib-obersvability/env"
-	httputil "github.com/Gen-Do/lib-obersvability/internal/http"
+	"github.com/Gen-Do/lib-observability/env"
+	httputil "github.com/Gen-Do/lib-observability/internal/http"
 )
 
 // Metrics структура для управления Prometheus метриками

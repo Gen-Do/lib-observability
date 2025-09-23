@@ -12,7 +12,7 @@
 ## Установка
 
 ```bash
-go get github.com/Gen-Do/lib-obersvability
+go get github.com/Gen-Do/lib-observability
 ```
 
 ## Быстрый старт
@@ -29,8 +29,8 @@ import (
     
     "github.com/go-chi/chi/v5"
     "github.com/go-chi/chi/v5/middleware"
-    "github.com/Gen-Do/lib-obersvability"
-    "github.com/Gen-Do/lib-obersvability/env"
+    "github.com/Gen-Do/lib-observability"
+    "github.com/Gen-Do/lib-observability/env"
 )
 
 func main() {
@@ -71,8 +71,8 @@ import (
     
     "github.com/go-chi/chi/v5"
     "github.com/go-chi/chi/v5/middleware"
-    "github.com/Gen-Do/lib-obersvability"
-    "github.com/Gen-Do/lib-obersvability/env"
+    "github.com/Gen-Do/lib-observability"
+    "github.com/Gen-Do/lib-observability/env"
 )
 
 func main() {
@@ -115,10 +115,10 @@ import (
     
     "github.com/go-chi/chi/v5"
     "github.com/go-chi/chi/v5/middleware"
-    "github.com/Gen-Do/lib-obersvability/env"
-    "github.com/Gen-Do/lib-obersvability/logger"
-    "github.com/Gen-Do/lib-obersvability/metrics"
-    "github.com/Gen-Do/lib-obersvability/tracing"
+    "github.com/Gen-Do/lib-observability/env"
+    "github.com/Gen-Do/lib-observability/logger"
+    "github.com/Gen-Do/lib-observability/metrics"
+    "github.com/Gen-Do/lib-observability/tracing"
 )
 
 func main() {
@@ -572,10 +572,10 @@ import (
     
     "github.com/go-chi/chi/v5"
     "github.com/go-chi/chi/v5/middleware"
-    "github.com/Gen-Do/lib-obersvability/env"
-    "github.com/Gen-Do/lib-obersvability/logger"
-    "github.com/Gen-Do/lib-obersvability/metrics"
-    "github.com/Gen-Do/lib-obersvability/tracing"
+    "github.com/Gen-Do/lib-observability/env"
+    "github.com/Gen-Do/lib-observability/logger"
+    "github.com/Gen-Do/lib-observability/metrics"
+    "github.com/Gen-Do/lib-observability/tracing"
 )
 
 func main() {

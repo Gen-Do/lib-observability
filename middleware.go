@@ -3,9 +3,9 @@ package observability
 import (
 	"net/http"
 
-	"github.com/Gen-Do/lib-obersvability/env"
-	"github.com/Gen-Do/lib-obersvability/logger"
-	"github.com/Gen-Do/lib-obersvability/tracing"
+	"github.com/Gen-Do/lib-observability/env"
+	"github.com/Gen-Do/lib-observability/logger"
+	"github.com/Gen-Do/lib-observability/tracing"
 )
 
 // HTTPMiddleware возвращает единый middleware, объединяющий все компоненты observability
