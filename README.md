@@ -27,6 +27,8 @@ import (
     "fmt"
     "net/http"
     
+    "github.com/go-chi/chi/v5"
+    "github.com/go-chi/chi/v5/middleware"
     "github.com/Gen-Do/lib-obersvability"
     "github.com/Gen-Do/lib-obersvability/env"
 )
@@ -38,8 +40,12 @@ func main() {
     obs := observability.MustNew(ctx)
     defer obs.Shutdown(ctx)
     
-    // Создание полностью настроенного роутера одной командой
-    r := obs.NewRouter()
+    // Создание роутера
+    r := chi.NewRouter()
+    r.Use(middleware.RequestID)
+    
+    // Полная настройка observability одной командой
+    obs.SetupHTTP(r)
     
     // Ваши обработчики
     r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +54,7 @@ func main() {
     })
     
     port := env.Get("PORT", 8080)
-    obs.Logger().Info(ctx, "Server starting", "port", port)
+    obs.Logger().Info(obs.Logger().WithField(ctx, "port", port), "Server starting")
     http.ListenAndServe(fmt.Sprintf(":%d", port), r)
 }
 ```
@@ -64,6 +70,7 @@ import (
     "net/http"
     
     "github.com/go-chi/chi/v5"
+    "github.com/go-chi/chi/v5/middleware"
     "github.com/Gen-Do/lib-obersvability"
     "github.com/Gen-Do/lib-obersvability/env"
 )
@@ -72,20 +79,18 @@ func main() {
     ctx := context.Background()
     
     // Инициализация observability
-    obs, err := observability.New(ctx)
-    if err != nil {
-        panic(err)
-    }
+    obs := observability.MustNew(ctx)
     defer obs.Shutdown(ctx)
     
-    // Создание роутера и настройка
+    // Создание роутера и ручная настройка
     r := chi.NewRouter()
-    obs.SetupRouter(r) // Автоматически добавляет middleware и служебные эндпоинты
+    r.Use(middleware.RequestID)
     
-    // Или по отдельности:
-    // obs.RegisterMetricsRoute(r)     // только /metrics
-    // obs.RegisterHealthRoute(r)      // только /health и /healthz
-    // obs.RegisterObservabilityRoutes(r) // все служебные эндпоинты
+    // Добавляем middleware
+    r.Use(obs.HTTPMiddleware())
+    
+    // Регистрируем служебные эндпоинты
+    obs.RegisterRoutes(r)
     
     // Ваши обработчики
     r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -178,45 +183,47 @@ if obs.IsTracingEnabled() {
 // HTTP setup
 r := chi.NewRouter()
 
-// Способ 1: Полная автоматическая настройка
-obs.SetupRouter(r) // middleware + служебные эндпоинты
+// Способ 1: Полная автоматическая настройка (рекомендуется)
+obs.SetupHTTP(r) // middleware + служебные эндпоинты
 
-// Способ 2: Создание нового роутера с полной настройкой
-r := obs.NewRouter()
+// Способ 2: Раздельная настройка
+obs.RegisterRoutes(r) // только служебные эндпоинты
+r.Use(obs.HTTPMiddleware()) // только middleware
 
-// Способ 3: Ручная настройка middleware
-for _, mw := range obs.HTTPMiddleware() {
-    r.Use(mw)
-}
+// Способ 3: Единый middleware
+r.Use(obs.HTTPMiddleware())
 
-// Способ 4: Отдельные middleware
+// Способ 4: Отдельные middleware (для тонкой настройки)
 r.Use(obs.RecoveryMiddleware())
 r.Use(obs.LoggingMiddleware())
 r.Use(obs.MetricsMiddleware())
 r.Use(obs.TracingMiddleware())
 
-// Способ 5: Регистрация эндпоинтов
-obs.RegisterMetricsRoute(r)        // /metrics
-obs.RegisterHealthRoute(r)         // /health, /healthz
-obs.RegisterObservabilityRoutes(r) // все служебные эндпоинты
-
-// Или классический способ
-r.Handle("/metrics", obs.MetricsHandler())
+// Способ 5: Ручная регистрация эндпоинтов
+r.Handle("/metrics", obs.MetricsHandler())  // Prometheus метрики
+r.Handle("/health", obs.HealthHandler())    // Health check
+r.Handle("/healthz", obs.HealthHandler())   // Kubernetes style
 ```
 
 #### Преимущества централизованного подхода
 
-- ✅ **Простота инициализации** - один вызов для всего stack
+- ✅ **Максимальная простота** - `obs.SetupHTTP(r)` настраивает всё одной командой
 - ✅ **Автоматическое управление** - корректное завершение работы
 - ✅ **Консистентность** - все компоненты работают согласованно
 - ✅ **Удобство использования** - единый интерфейс для всех компонентов
 - ✅ **Обработка ошибок** - централизованная обработка ошибок инициализации
-- ✅ **Автоматические эндпоинты** - служебные роуты создаются автоматически
-- ✅ **Гибкость настройки** - от полностью автоматической до ручной настройки
+- ✅ **Независимость от роутера** - работает с любым HTTP роутером через интерфейсы
+- ✅ **Гибкость настройки** - от полной автоматизации до ручной настройки
 
-#### Автоматически создаваемые эндпоинты
+#### Автоматические методы
 
-При использовании `obs.SetupRouter()`, `obs.NewRouter()` или `obs.RegisterObservabilityRoutes()`:
+- `obs.SetupHTTP(router)` - полная настройка (middleware + эндпоинты)
+- `obs.RegisterRoutes(router)` - регистрация только служебных эндпоинтов
+- `obs.HTTPMiddleware()` - единый middleware для всех компонентов
+
+#### Служебные эндпоинты
+
+Автоматически создаются при вызове `SetupHTTP()` или `RegisterRoutes()`:
 
 - `GET /metrics` - Prometheus метрики
 - `GET /health` - Health check endpoint
@@ -230,6 +237,14 @@ Health endpoint возвращает:
   "version": "v1.0.0"
 }
 ```
+
+#### Совместимость с роутерами
+
+Работает с любыми роутерами, поддерживающими интерфейсы:
+- `RouterRegistrar` (методы Handle) - для регистрации эндпоинтов
+- `HTTPRouter` (методы Handle + Use) - для полной настройки
+
+Проверено с: chi, gorilla/mux, gin, fiber и другими.
 
 ### env - Переменные окружения
 

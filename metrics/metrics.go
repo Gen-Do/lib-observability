@@ -8,13 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/Gen-Do/lib-obersvability/env"
+	httputil "github.com/Gen-Do/lib-obersvability/internal/http"
 )
 
 // Metrics структура для управления Prometheus метриками
@@ -122,16 +121,16 @@ func (m *Metrics) Middleware() func(http.Handler) http.Handler {
 			start := time.Now()
 
 			// Создаем wrapper для ResponseWriter чтобы захватить статус код
-			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			rw := httputil.NewResponseWriter(w)
 
 			// Выполняем следующий handler
-			next.ServeHTTP(ww, r)
+			next.ServeHTTP(rw, r)
 
 			// Записываем метрики (они уже инициализированы благодаря sync.Once)
 			duration := time.Since(start).Seconds()
-			statusCode := strconv.Itoa(ww.Status())
+			statusCode := strconv.Itoa(rw.Status())
 
-			// Получаем путь из роута chi, если доступен
+			// Получаем путь запроса
 			path := m.getRoutePath(r)
 
 			// Увеличиваем счетчик запросов
@@ -164,17 +163,9 @@ func (m *Metrics) shouldSkipPath(path string) bool {
 	return false
 }
 
-// getRoutePath пытается получить шаблон маршрута из chi роутера
+// getRoutePath возвращает путь для метрик (без query параметров)
 func (m *Metrics) getRoutePath(r *http.Request) string {
-	// Пытаемся получить паттерн маршрута из chi
-	if routeContext := chi.RouteContext(r.Context()); routeContext != nil {
-		if routePattern := routeContext.RoutePattern(); routePattern != "" {
-			return routePattern
-		}
-	}
-
-	// Если не удалось получить паттерн, возвращаем путь как есть
-	// но обрезаем query параметры
+	// Возвращаем путь как есть, но обрезаем query параметры
 	path := r.URL.Path
 	if path == "" {
 		path = "/"

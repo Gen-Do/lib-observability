@@ -1,13 +1,13 @@
 package logger
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5/middleware"
-
 	"github.com/Gen-Do/lib-obersvability/env"
+	httputil "github.com/Gen-Do/lib-obersvability/internal/http"
 )
 
 // HTTPMiddleware создает middleware для логирования HTTP запросов
@@ -32,7 +32,7 @@ func HTTPMiddleware(logger Logger) func(http.Handler) http.Handler {
 			start := time.Now()
 
 			// Создаем wrapper для ResponseWriter чтобы захватить статус код
-			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			rw := httputil.NewResponseWriter(w)
 
 			// Добавляем информацию о запросе в контекст логгера
 			ctx = logger.WithFields(ctx, Fields{
@@ -41,26 +41,26 @@ func HTTPMiddleware(logger Logger) func(http.Handler) http.Handler {
 				"http_path":        r.URL.Path,
 				"http_remote_addr": r.RemoteAddr,
 				"http_user_agent":  r.UserAgent(),
-				"http_request_id":  middleware.GetReqID(ctx),
+				"http_request_id":  getRequestID(ctx),
 			})
 
 			// Обновляем контекст в запросе
 			r = r.WithContext(ctx)
 
 			// Выполняем следующий handler
-			next.ServeHTTP(ww, r)
+			next.ServeHTTP(rw, r)
 
 			// Логируем результат
 			duration := time.Since(start)
 
 			ctx = logger.WithFields(ctx, Fields{
-				"http_status":        ww.Status(),
+				"http_status":        rw.Status(),
 				"http_duration_ms":   duration.Milliseconds(),
-				"http_bytes_written": ww.BytesWritten(),
+				"http_bytes_written": rw.BytesWritten(),
 			})
 
 			// Определяем уровень логирования на основе статус кода
-			statusCode := ww.Status()
+			statusCode := rw.Status()
 			switch {
 			case statusCode >= http.StatusInternalServerError:
 				logger.Error(ctx, "HTTP request completed with server error")
@@ -88,7 +88,7 @@ func RecovererMiddleware(logger Logger) func(http.Handler) http.Handler {
 						"http_url":         r.URL.String(),
 						"http_path":        r.URL.Path,
 						"http_remote_addr": r.RemoteAddr,
-						"http_request_id":  middleware.GetReqID(ctx),
+						"http_request_id":  getRequestID(ctx),
 					})
 
 					logger.Error(ctx, "HTTP request panicked")
@@ -101,6 +101,22 @@ func RecovererMiddleware(logger Logger) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// getRequestID пытается получить request ID из контекста
+// Совместимо с chi middleware.RequestID
+func getRequestID(ctx context.Context) string {
+	if reqID, ok := ctx.Value("RequestID").(string); ok {
+		return reqID
+	}
+	// Альтернативные ключи для совместимости
+	if reqID, ok := ctx.Value("request-id").(string); ok {
+		return reqID
+	}
+	if reqID, ok := ctx.Value("X-Request-ID").(string); ok {
+		return reqID
+	}
+	return ""
 }
 
 // shouldSkipPath проверяет, нужно ли пропустить путь при логировании
