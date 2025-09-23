@@ -451,41 +451,111 @@ log.Info(log.WithField(ctx, "trace_id", traceID), "Processing completed")
 
 ## Переменные окружения
 
-### Общие
-- `SERVICE_NAME` - имя сервиса
-- `SERVICE_VERSION` - версия сервиса (default: "v0.0.1")
-- `ENV_NAME` - окружение: prod/staging/local (default: "local")
+Библиотека использует переменные окружения для настройки всех компонентов. Ниже приведен полный список всех поддерживаемых переменных:
 
-### Логирование
-- `LOG_LEVEL` - debug/info/warn/error (default: "debug")
-- `LOG_FORMAT` - json/text (default: "json")
-- `LOG_HTTP_ENABLED` - true/false (default: true)
+### 🌍 Общие переменные
+Используются всеми компонентами для идентификации сервиса:
 
-### Метрики
-- `METRICS_ENABLED` - true/false (default: true)
+| Переменная | Описание | Значение по умолчанию | Обязательная |
+|------------|----------|----------------------|--------------|
+| `SERVICE_NAME` | Имя сервиса | "" | ❌ (для env/logger/metrics), ✅ (для tracing) |
+| `SERVICE_VERSION` | Версия сервиса | "v0.0.1" | ❌ |
+| `ENV_NAME` | Окружение развертывания | "local" | ❌ |
 
-### Трейсинг
-- `TRACING_ENABLED` - true/false (default: false)
-- `TRACING_SAMPLING_RATE` - 0.0-1.0 (default: 1.0)
-- `TRACING_ENDPOINT` - URL эндпоинта для отправки трейсов
+**Допустимые значения для `ENV_NAME`:**
+- `prod` / `production` - продакшн окружение
+- `staging` / `stage` - тестовое окружение  
+- `local` / `dev` / `development` - локальная разработка
+
+### 📝 Логирование (пакет logger)
+Настройка структурированного логирования:
+
+| Переменная | Описание | Значение по умолчанию | Допустимые значения |
+|------------|----------|----------------------|-------------------|
+| `LOG_LEVEL` | Уровень логирования | "debug" | debug, info, warn, error, fatal, panic |
+| `LOG_FORMAT` | Формат вывода логов | "json" | json, text |
+| `LOG_HTTP_ENABLED` | Включить HTTP middleware для логирования | true | true, false, 1, 0, yes, no, on, off |
+
+### 📊 Метрики (пакет metrics) 
+Настройка Prometheus метрик:
+
+| Переменная | Описание | Значение по умолчанию | Допустимые значения |
+|------------|----------|----------------------|-------------------|
+| `METRICS_ENABLED` | Включить сбор метрик | true | true, false, 1, 0, yes, no, on, off |
+
+**Автоматические лейблы метрик:**
+- Все метрики автоматически получают лейблы `service_name` и `env_name` из соответствующих переменных окружения
+- HTTP метрики включают лейблы: `method`, `path`, `status_code`
+
+### 🔍 Трейсинг (пакет tracing)
+Настройка OpenTelemetry трейсинга:
+
+| Переменная | Описание | Значение по умолчанию | Допустимые значения | Обязательная |
+|------------|----------|----------------------|-------------------|--------------|
+| `TRACING_ENABLED` | Включить трейсинг | false | true, false, 1, 0, yes, no, on, off | ❌ |
+| `TRACING_SAMPLING_RATE` | Частота сэмплирования (0.0 = 0%, 1.0 = 100%) | 1.0 | 0.0 - 1.0 | ❌ |
+| `TRACING_ENDPOINT` | URL для отправки трейсов | "" | HTTP URL (например, http://jaeger:14268/api/traces) | ❌ |
+
+**Важные замечания по трейсингу:**
+- ⚠️ `SERVICE_NAME` **обязательна** при включенном трейсинге (`TRACING_ENABLED=true`)
+- 🔄 При отсутствии `TRACING_ENDPOINT` трейсы генерируются, но не экспортируются
+- 🎯 Trace ID никогда не генерируется заполненным нулями (защита от ошибок конфигурации)
+- 📊 Поддерживается W3C Trace Context для propagation между сервисами
+
+### 🔧 Дополнительные переменные (пакет env)
+Вспомогательные функции поддерживают любые пользовательские переменные:
+
+```go
+// Строки
+dbURL := env.GetString("DATABASE_URL", "postgres://localhost/mydb")
+
+// Числа
+port := env.GetInt("PORT", 8080)
+timeout := env.GetFloat64("TIMEOUT_SECONDS", 30.0)
+
+// Булевы значения (поддерживает: true/false, 1/0, yes/no, on/off)
+debug := env.GetBool("DEBUG_MODE", false)
+
+// Продолжительность (поддерживает: 5s, 10m, 1h, etc.)
+interval := env.GetDuration("POLL_INTERVAL", 30*time.Second)
+
+// Дженерик функция для любых типов
+maxRetries := env.Get("MAX_RETRIES", 3)           // int
+apiKey := env.Get("API_KEY", "default-key")       // string
+enabled := env.Get("FEATURE_ENABLED", true)       // bool
+```
 
 ## Пример полной настройки
 
 ```bash
-# .env файл
-SERVICE_NAME=my-service
-SERVICE_VERSION=v1.0.0
+# .env файл - пример полной конфигурации для production
+
+# 🌍 Общие настройки сервиса
+SERVICE_NAME=user-api
+SERVICE_VERSION=v2.1.3
 ENV_NAME=production
 
+# 📝 Настройки логирования  
 LOG_LEVEL=info
 LOG_FORMAT=json
 LOG_HTTP_ENABLED=true
 
+# 📊 Настройки метрик
 METRICS_ENABLED=true
 
+# 🔍 Настройки трейсинга
 TRACING_ENABLED=true
 TRACING_SAMPLING_RATE=0.1
-TRACING_ENDPOINT=http://jaeger:14268/api/traces
+TRACING_ENDPOINT=http://jaeger-collector:14268/api/traces
+
+# 🔧 Пользовательские переменные (примеры)
+DATABASE_URL=postgres://user:pass@db:5432/myapp
+REDIS_URL=redis://redis:6379/0
+PORT=8080
+DEBUG_MODE=false
+MAX_RETRIES=3
+TIMEOUT_SECONDS=30.0
+POLL_INTERVAL=5m
 ```
 
 ```go
