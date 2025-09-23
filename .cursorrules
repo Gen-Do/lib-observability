@@ -1,0 +1,179 @@
+# Правила для lib-observability
+
+## Общие требования
+
+### Язык программирования
+- Использовать Go версии 1.24.2
+- Имя модуля: `github.com/Gen-Do/lib-obersvability`
+
+### Архитектурные принципы
+- Следовать принципам SOLID
+- Использовать интерфейсы для абстракции
+- Контекст должен передаваться как первый параметр во все функции
+- Все пакеты должны быть независимыми и переиспользуемыми
+- Использовать переменные окружения для конфигурации
+
+### Стиль кода
+- Следовать стандартам Go (gofmt, golint)
+- Использовать осмысленные имена переменных и функций
+- Документировать все публичные функции и типы
+- Обрабатывать ошибки явно
+- Избегать глобальных переменных
+
+### Структура проекта
+```
+lib-observability/
+├── env/           # Работа с переменными окружения
+├── logger/        # Логирование с абстракцией
+├── metrics/       # Prometheus метрики
+├── tracing/       # OpenTelemetry трейсинг
+├── go.mod
+├── go.sum
+├── README.md
+└── .cursorrules
+```
+
+## Пакет env
+
+### Требования
+- Пакет: `github.com/Gen-Do/lib-observability/env`
+- Функции для получения значений из переменных окружения с дефолтными значениями
+- Специализированные функции для SERVICE_NAME, SERVICE_VERSION, ENV_NAME
+- Поддержка типов: string, bool, int, float64, duration
+
+### Обязательные функции
+```go
+func GetString(key, defaultValue string) string
+func GetBool(key string, defaultValue bool) bool
+func GetInt(key string, defaultValue int) int
+func GetFloat64(key string, defaultValue float64) float64
+func GetDuration(key string, defaultValue time.Duration) time.Duration
+func GetServiceName() string
+func GetServiceVersion() string
+func GetEnvName() EnvName
+```
+
+### Переменные окружения
+- `SERVICE_NAME` - имя сервиса
+- `SERVICE_VERSION` - версия сервиса (по умолчанию "v0.0.1")
+- `ENV_NAME` - окружение (prod, staging, local; по умолчанию "local")
+
+## Пакет logger
+
+### Требования
+- Пакет: `github.com/Gen-Do/lib-observability/logger`
+- Использовать logrus как реализацию
+- Интерфейс Logger для абстракции
+- Контекстное логирование с WithField, WithFields, WithError
+- Middleware для Chi HTTP роутера
+
+### Интерфейс Logger
+```go
+type Logger interface {
+    WithField(ctx context.Context, key string, value interface{}) context.Context
+    WithFields(ctx context.Context, fields Fields) context.Context
+    WithError(ctx context.Context, err error) context.Context
+    Debug(ctx context.Context, args ...interface{})
+    Info(ctx context.Context, args ...interface{})
+    Print(ctx context.Context, args ...interface{})
+    Warn(ctx context.Context, args ...interface{})
+    Error(ctx context.Context, args ...interface{})
+    Fatal(ctx context.Context, args ...interface{})
+    Panic(ctx context.Context, args ...interface{})
+}
+```
+
+### Переменные окружения
+- `LOG_LEVEL` - уровень логирования (по умолчанию "debug")
+- `LOG_FORMAT` - формат логов (по умолчанию "json")
+- `LOG_HTTP_ENABLED` - включить HTTP middleware (по умолчанию true)
+- `SERVICE_NAME`, `SERVICE_VERSION`, `ENV_NAME` - автоматически добавляются в поля
+
+### Конструктор
+```go
+func New(ctx context.Context) Logger
+```
+
+## Пакет metrics
+
+### Требования
+- Пакет: `github.com/Gen-Do/lib-observability/metrics`
+- Использовать Prometheus
+- Автоматическое добавление SERVICE_NAME и ENV_NAME как лейблы
+- HTTP middleware для Chi с метриками запросов
+- Handler для `/metrics` эндпоинта
+
+### Переменные окружения
+- `METRICS_ENABLED` - включить метрики (по умолчанию true)
+- `SERVICE_NAME`, `ENV_NAME` - автоматически добавляются как лейблы
+
+### Структура и методы
+```go
+type Metrics struct {
+    // ...
+}
+
+func New() *Metrics
+func (m *Metrics) GetRegistry() *prometheus.Registry
+func (m *Metrics) Handler() http.Handler
+func (m *Metrics) Middleware() func(http.Handler) http.Handler
+```
+
+## Пакет tracing
+
+### Требования
+- Пакет: `github.com/Gen-Do/lib-observability/tracing`
+- Использовать OpenTelemetry
+- HTTP middleware для Chi
+- Поддержка контекстных спанов
+- Автоматическая настройка на основе переменных окружения
+
+### Переменные окружения
+- `TRACING_ENABLED` - включить трейсинг (по умолчанию false)
+- `TRACING_SAMPLING_RATE` - частота сэмплирования (по умолчанию 1.0)
+- `TRACING_ENDPOINT` - эндпоинт для отправки трейсов
+- `SERVICE_NAME`, `SERVICE_VERSION`, `ENV_NAME` - метаданные сервиса
+
+### Конструктор
+```go
+func New() error
+```
+
+## Зависимости
+
+### Основные
+- `github.com/sirupsen/logrus` - логирование
+- `github.com/prometheus/client_golang` - метрики
+- `go.opentelemetry.io/otel` - трейсинг
+- `github.com/go-chi/chi/v5` - HTTP роутер (для middleware)
+
+### Правила работы с зависимостями
+- Использовать семантическое версионирование
+- Минимизировать количество внешних зависимостей
+- Все зависимости должны быть совместимы с Go 1.24.2
+
+## Тестирование
+
+### Требования
+- Unit тесты для всех публичных функций
+- Тесты должны быть в отдельных файлах (*_test.go)
+- Использовать table-driven тесты где применимо
+- Покрытие кода должно быть > 80%
+
+## Документация
+
+### README.md должен содержать
+- Описание библиотеки
+- Примеры использования каждого пакета
+- Список переменных окружения
+- Инструкции по установке
+
+### Комментарии в коде
+- Все публичные функции и типы должны быть документированы
+- Комментарии должны начинаться с имени функции/типа
+- Примеры использования в комментариях где необходимо
+
+## Безопасность
+- Не логировать чувствительную информацию
+- Валидировать все входные параметры
+- Обрабатывать ошибки без паники (кроме Fatal/Panic методов логгера)
