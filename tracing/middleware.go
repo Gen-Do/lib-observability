@@ -6,8 +6,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 
@@ -31,11 +33,14 @@ func HTTPMiddleware() func(http.Handler) http.Handler {
 				return
 			}
 
+			// Извлекаем контекст трейса из входящих заголовков (W3C traceparent/tracestate)
+			ctx := otel.GetTextMapPropagator().Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+
 			// Получаем операционное имя для спана
 			operationName := getOperationName(r)
 
-			// Создаем спан
-			ctx, span := StartSpan(r.Context(), operationName,
+			// Создаем спан (если пришёл traceparent — станет дочерним)
+			ctx, span := StartSpan(ctx, operationName,
 				trace.WithSpanKind(trace.SpanKindServer),
 				trace.WithAttributes(
 					semconv.HTTPMethodKey.String(r.Method),
