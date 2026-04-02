@@ -3,6 +3,7 @@ package logger
 
 import (
 	"context"
+	"runtime/debug"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -160,7 +161,28 @@ func (l *logrusAdapter) Fatal(ctx context.Context, args ...interface{}) {
 	l.getLogrusEntry(ctx).Fatal(args...)
 }
 
-// Panic логирует сообщение уровня Panic и вызывает панику
+// Panic логирует сообщение уровня Panic со stacktrace и вызывает панику
 func (l *logrusAdapter) Panic(ctx context.Context, args ...interface{}) {
+	ctx = l.WithField(ctx, "stacktrace", string(debug.Stack()))
 	l.getLogrusEntry(ctx).Panic(args...)
+}
+
+// Recover перехватывает панику, логирует её со stacktrace в JSON формате
+// и при необходимости повторно вызывает панику (reraise=true) или подавляет её.
+// Предназначен для использования через defer в main() или goroutine-обёртках.
+//
+// Пример:
+//
+//	defer logger.Recover(ctx, log, true)
+func Recover(ctx context.Context, log Logger, reraise bool) {
+	if rvr := recover(); rvr != nil {
+		ctx = log.WithFields(ctx, Fields{
+			"panic":      rvr,
+			"stacktrace": string(debug.Stack()),
+		})
+		log.Error(ctx, "panic recovered")
+		if reraise {
+			panic(rvr)
+		}
+	}
 }

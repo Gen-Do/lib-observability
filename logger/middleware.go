@@ -3,6 +3,7 @@ package logger
 import (
 	"context"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -81,9 +82,10 @@ func RecovererMiddleware(logger Logger) func(http.Handler) http.Handler {
 				if rvr := recover(); rvr != nil {
 					ctx := r.Context()
 
-					// Логируем панику как ошибку
+					// Логируем панику как ошибку со stacktrace
 					ctx = logger.WithFields(ctx, Fields{
 						"panic":            rvr,
+						"stacktrace":       string(debug.Stack()),
 						"http_method":      r.Method,
 						"http_url":         r.URL.String(),
 						"http_path":        r.URL.Path,
