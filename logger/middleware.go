@@ -121,23 +121,30 @@ func getRequestID(ctx context.Context) string {
 	return ""
 }
 
-// shouldSkipPath проверяет, нужно ли пропустить путь при логировании
-func shouldSkipPath(path string) bool {
-	skipPaths := []string{
-		"/metrics",
-		"/health",
-		"/healthz",
-		"/ready",
-		"/readiness",
-		"/liveness",
-		"/ping",
-	}
+// skipPrefixes — пути, пропускаемые по префиксу (включая все сабпути)
+var skipPrefixes = []string{"/metrics"}
 
-	for _, skipPath := range skipPaths {
-		if strings.HasPrefix(path, skipPath) {
+// skipSuffixes — пути, пропускаемые по суффиксу (покрывает /v1/health, /api/v1/ready и т.д.)
+var skipSuffixesLog = []string{
+	"/health",
+	"/healthz",
+	"/ready",
+	"/readiness",
+	"/liveness",
+	"/ping",
+}
+
+// shouldSkipPath проверяет, нужно ли пропустить путь при логировании.
+func shouldSkipPath(path string) bool {
+	for _, prefix := range skipPrefixes {
+		if strings.HasPrefix(path, prefix) {
 			return true
 		}
 	}
-
+	for _, suffix := range skipSuffixesLog {
+		if strings.HasSuffix(path, suffix) {
+			return true
+		}
+	}
 	return false
 }

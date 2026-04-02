@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/Gen-Do/lib-observability/env"
 )
@@ -126,6 +127,14 @@ func (l *logrusAdapter) getLogrusEntry(ctx context.Context) *logrus.Entry {
 		for k, v := range fields {
 			entry = entry.WithField(k, v)
 		}
+	}
+
+	// Автоматически добавляем trace_id и span_id из активного OpenTelemetry span.
+	// Это позволяет Grafana строить ссылки Loki → Tempo по полю trace_id.
+	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+		sc := span.SpanContext()
+		entry = entry.WithField("trace_id", sc.TraceID().String())
+		entry = entry.WithField("span_id", sc.SpanID().String())
 	}
 
 	return entry

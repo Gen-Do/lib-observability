@@ -85,24 +85,18 @@ func HTTPMiddleware() func(http.Handler) http.Handler {
 	}
 }
 
-// shouldSkipPath проверяет, нужно ли пропустить путь при трейсинге
+// shouldSkipPath проверяет, нужно ли пропустить путь при трейсинге.
+// /metrics/* — по префиксу (все сабпути).
+// health/ready/ping — по суффиксу (покрывает /v1/health, /api/v1/ready и т.д.).
 func shouldSkipPath(path string) bool {
-	skipPaths := []string{
-		"/metrics",
-		"/health",
-		"/healthz",
-		"/ready",
-		"/readiness",
-		"/liveness",
-		"/ping",
+	if strings.HasPrefix(path, "/metrics") {
+		return true
 	}
-
-	for _, skipPath := range skipPaths {
-		if strings.HasPrefix(path, skipPath) {
+	for _, suffix := range []string{"/health", "/healthz", "/ready", "/readiness", "/liveness", "/ping"} {
+		if strings.HasSuffix(path, suffix) {
 			return true
 		}
 	}
-
 	return false
 }
 
