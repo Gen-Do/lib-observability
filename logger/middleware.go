@@ -68,7 +68,7 @@ func HTTPMiddleware(logger Logger) func(http.Handler) http.Handler {
 			case statusCode >= http.StatusBadRequest:
 				logger.Warn(ctx, "HTTP request completed with client error")
 			default:
-				logger.Info(ctx, "HTTP request completed")
+				logger.Debug(ctx, "HTTP request completed")
 			}
 		})
 	}

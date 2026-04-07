@@ -143,7 +143,7 @@ func TestHTTPMiddleware_StatusCodes(t *testing.T) {
 		{
 			name:          "success 200",
 			statusCode:    200,
-			expectedLevel: "info",
+			expectedLevel: "debug",
 			expectedMsg:   "HTTP request completed",
 		},
 		{
@@ -167,6 +167,7 @@ func TestHTTPMiddleware_StatusCodes(t *testing.T) {
 			logrusLogger := logrus.New()
 			logrusLogger.SetOutput(&buf)
 			logrusLogger.SetFormatter(&logrus.JSONFormatter{})
+			logrusLogger.SetLevel(logrus.DebugLevel)
 			logger := &logrusAdapter{logger: logrusLogger}
 
 			// Создаем middleware
