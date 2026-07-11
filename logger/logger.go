@@ -81,24 +81,28 @@ func New(ctx context.Context) Logger {
 
 // WithField добавляет поле в контекст
 func (l *logrusAdapter) WithField(ctx context.Context, key string, value interface{}) context.Context {
-	fields := l.getFieldsFromContext(ctx)
-	if fields == nil {
-		fields = make(Fields)
-	}
-	fields[key] = value
-	return context.WithValue(ctx, fieldsContextKey, fields)
+	return l.WithFields(ctx, Fields{key: value})
 }
 
-// WithFields добавляет несколько полей в контекст
+// WithFields добавляет несколько полей в контекст.
+//
+// Поля родительского контекста копируются в новую map, а не дописываются на
+// месте. Мутация общей map ломала два инварианта: (1) горутины, порождённые из
+// одного контекста, конкурентно звали WithField/логировали → `fatal error:
+// concurrent map iteration and map write` (getLogrusEntry итерирует ту же map);
+// (2) поля дочернего контекста протекали обратно в родительский, потому что оба
+// держали один объект map. Копия на каждую деривацию делает map неизменяемой
+// после сохранения — безопасно и для конкурентного чтения, и для чтения-записи.
 func (l *logrusAdapter) WithFields(ctx context.Context, newFields Fields) context.Context {
-	fields := l.getFieldsFromContext(ctx)
-	if fields == nil {
-		fields = make(Fields)
+	existing := l.getFieldsFromContext(ctx)
+	merged := make(Fields, len(existing)+len(newFields))
+	for k, v := range existing {
+		merged[k] = v
 	}
 	for k, v := range newFields {
-		fields[k] = v
+		merged[k] = v
 	}
-	return context.WithValue(ctx, fieldsContextKey, fields)
+	return context.WithValue(ctx, fieldsContextKey, merged)
 }
 
 // WithError добавляет ошибку в контекст
